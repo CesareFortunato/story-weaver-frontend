@@ -31,6 +31,21 @@ function PlayPage() {
     const [isTextComplete, setIsTextComplete] = useState(false);
     const [selectedChoiceId, setSelectedChoiceId] = useState(null);
 
+    const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+    const [audio] = useState(() => {
+        const ambientAudio = new Audio("/audio/ambient-loop.mp3");
+        ambientAudio.loop = true;
+        ambientAudio.volume = 0.35;
+        return ambientAudio;
+    });
+
+    useEffect(() => {
+        return () => {
+            audio.pause();
+            audio.currentTime = 0;
+        };
+    }, [audio]);
+
     useEffect(() => {
         setLoading(true);
         setError(null);
@@ -56,6 +71,8 @@ function PlayPage() {
                 setLoading(false);
             });
     }, [storyId, nodeId]);
+
+
 
     useEffect(() => {
         if (!currentNode?.text) {
@@ -83,6 +100,25 @@ function PlayPage() {
     useEffect(() => {
         localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(inventory));
     }, [inventory]);
+
+    function toggleMusic() {
+        if (isMusicPlaying) {
+            audio.pause();
+            setIsMusicPlaying(false);
+            return;
+        }
+
+        audio.play()
+            .then(() => {
+                setIsMusicPlaying(true);
+            })
+            .catch(() => {
+                setError({
+                    code: "AUDIO_NOT_AVAILABLE",
+                    message: "Audio non disponibile o file mancante.",
+                });
+            });
+    }
 
     function addTokensToInventory(tokens) {
         if (!tokens || tokens.length === 0) {
@@ -155,6 +191,7 @@ function PlayPage() {
                     <Link className="secondary-link" to="/">
                         Torna alla home
                     </Link>
+
                 </div>
             </main>
         );
@@ -196,6 +233,9 @@ function PlayPage() {
                 <Link className="home-button" to="/">
                     ← Home
                 </Link>
+                <button className="music-button" onClick={toggleMusic}>
+                    {isMusicPlaying ? "🔊 Audio ON" : "🔈 Audio OFF"}
+                </button>
 
                 {collectedTokens.length > 0 && (
                     <div className="token-toast">
@@ -254,12 +294,59 @@ function PlayPage() {
 
                     <div className="choices">
                         {currentNode.choices.length === 0 ? (
-                            <div>
-                                <p className="end-message">Fine della storia</p>
+                            <div className="ending-box">
+                                <p className="ending-label">Finale raggiunto</p>
 
-                                <Link className="play-button" to="/">
-                                    Torna alla home
-                                </Link>
+                                <h2>{currentNode.title || "Fine della storia"}</h2>
+
+                                <p className="ending-text">
+                                    La tua storia termina qui. Le scelte compiute hanno lasciato un segno nel mondo.
+                                </p>
+
+                                {inventory.length > 0 && (
+                                    <div className="ending-inventory">
+                                        <h3>Token raccolti</h3>
+
+                                        <div className="ending-token-list">
+                                            {inventory.map(token => (
+                                                <div className="ending-token" key={token.id}>
+                                                    {token.image_url && (
+                                                        <img
+                                                            src={`${API_BASE_URL}${token.image_url}`}
+                                                            alt={token.name}
+                                                        />
+                                                    )}
+
+                                                    <span>{token.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="ending-actions">
+                                    <Link
+                                        className="play-button"
+                                        to="/"
+                                        onClick={() => {
+                                            localStorage.removeItem(INVENTORY_STORAGE_KEY);
+                                            localStorage.removeItem(CURRENT_NODE_STORAGE_KEY);
+                                        }}
+                                    >
+                                        Torna alla home
+                                    </Link>
+
+                                    <Link
+                                        className="secondary-ending-button"
+                                        to={`/play/${storyId || currentNode.story_id}`}
+                                        onClick={() => {
+                                            localStorage.removeItem(INVENTORY_STORAGE_KEY);
+                                            localStorage.removeItem(CURRENT_NODE_STORAGE_KEY);
+                                        }}
+                                    >
+                                        Rigioca
+                                    </Link>
+                                </div>
                             </div>
                         ) : (
                             currentNode.choices.map(choice => (
