@@ -12,6 +12,10 @@ const router = createBrowserRouter([
     path: "/play/:storyId",
     element: <PlayPage />,
   },
+  {
+    path: "/play-node/:nodeId",
+    element: <PlayPage />,
+  },
 ]);
 
 export default router;

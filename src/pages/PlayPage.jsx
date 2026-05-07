@@ -4,19 +4,23 @@ import { useParams } from "react-router-dom";
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 function PlayPage() {
-    const { storyId } = useParams();
+    const { storyId, nodeId } = useParams();
 
     const [currentNode, setCurrentNode] = useState(null);
     const [inventory, setInventory] = useState([]);
     const [isChangingScene, setIsChangingScene] = useState(false);
 
     useEffect(() => {
-        fetch(`${API_BASE_URL}/api/stories/${storyId}/start`)
+        const url = nodeId
+            ? `${API_BASE_URL}/api/nodes/${nodeId}`
+            : `${API_BASE_URL}/api/stories/${storyId}/start`;
+
+        fetch(url)
             .then(res => res.json())
             .then(data => {
                 setCurrentNode(data.data);
             });
-    }, [storyId]);
+    }, [storyId, nodeId]);
 
     function addTokensToInventory(tokens) {
         if (!tokens || tokens.length === 0) {
