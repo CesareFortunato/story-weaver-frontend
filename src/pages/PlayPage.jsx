@@ -13,7 +13,9 @@ function PlayPage() {
     const [collectedTokens, setCollectedTokens] = useState([]);
     const [displayedText, setDisplayedText] = useState("");
     const [isTextComplete, setIsTextComplete] = useState(false);
+
     const [selectedChoiceId, setSelectedChoiceId] = useState(null);
+
     useEffect(() => {
         setLoading(true);
         setError(null);
@@ -90,6 +92,8 @@ function PlayPage() {
     }
 
     function loadNextNode(choice) {
+
+        setSelectedChoiceId(choice.id);
         addTokensToInventory(choice.tokens);
 
         if (!choice.next_node_id) {
@@ -107,6 +111,7 @@ function PlayPage() {
             getNode(choice.next_node_id)
                 .then(node => {
                     setCurrentNode(node);
+                    setSelectedChoiceId(null);
                 })
                 .catch(error => {
                     setError(error);
@@ -235,7 +240,7 @@ function PlayPage() {
                         ) : (
                             currentNode.choices.map(choice => (
                                 <button
-                                    className="choice-button"
+                                    className={`choice-button ${selectedChoiceId === choice.id ? "selected" : ""}`}
                                     key={choice.id}
                                     onClick={() => loadNextNode(choice)}
                                     disabled={isChangingScene || !isTextComplete}

@@ -417,3 +417,38 @@ body {
     opacity: 0.45;
     transform: none;
 }
+
+.choice-button {
+    position: relative;
+    overflow: hidden;
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease,
+        opacity 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.choice-button.selected {
+    background: #d8a35d;
+    color: #111;
+    transform: translateX(10px) scale(1.015);
+    box-shadow: 0 0 28px rgba(216, 163, 93, 0.35);
+}
+
+.choice-button.selected::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.45),
+            transparent);
+    transform: translateX(-100%);
+    animation: choiceShine 0.55s ease forwards;
+}
+
+@keyframes choiceShine {
+    to {
+        transform: translateX(100%);
+    }
+}
