@@ -261,3 +261,159 @@ body {
         font-size: 17px;
     }
 }
+
+.play-state-page {
+    min-height: 100vh;
+    padding: 40px;
+    box-sizing: border-box;
+    display: grid;
+    place-items: center;
+    background:
+        radial-gradient(circle at top, rgba(120, 20, 40, 0.22), transparent 35%),
+        linear-gradient(135deg, #090909, #171717);
+}
+
+.home-button {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    z-index: 5;
+    padding: 10px 16px;
+    border-radius: 999px;
+    color: white;
+    text-decoration: none;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(8px);
+}
+
+.home-button:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.secondary-link {
+    display: inline-block;
+    margin-top: 12px;
+    color: #d8a35d;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.error-code {
+    margin-top: 16px;
+    font-family: monospace;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.inline-error {
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    color: #ffd7d7;
+    background: rgba(120, 0, 0, 0.35);
+    border: 1px solid rgba(255, 100, 100, 0.3);
+}
+
+.token-toast {
+    position: absolute;
+    left: 40px;
+    top: 86px;
+    z-index: 6;
+    min-width: 240px;
+    padding: 16px;
+    border-radius: 18px;
+    background: rgba(20, 10, 5, 0.86);
+    border: 1px solid rgba(216, 163, 93, 0.45);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    animation: tokenPop 0.35s ease both;
+}
+
+.token-toast strong {
+    display: block;
+    margin-bottom: 10px;
+    color: #d8a35d;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 12px;
+}
+
+.token-toast-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.token-toast-item img {
+    width: 42px;
+    height: 42px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.token img {
+    width: 36px;
+    height: 36px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.choice-button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+@keyframes tokenPop {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 700px) {
+    .inventory {
+        position: static;
+        width: auto;
+        margin-bottom: 20px;
+    }
+
+    .token-toast {
+        left: 20px;
+        right: 20px;
+        top: 76px;
+    }
+
+    .game-overlay {
+        padding: 96px 20px 28px;
+    }
+}
+
+.text-cursor {
+    display: inline-block;
+    margin-left: 3px;
+    color: #d8a35d;
+    animation: blink 0.8s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    50% {
+        opacity: 1;
+    }
+
+    51%,
+    100% {
+        opacity: 0;
+    }
+}
+
+.choice-button:disabled {
+    cursor: wait;
+    opacity: 0.45;
+    transform: none;
+}

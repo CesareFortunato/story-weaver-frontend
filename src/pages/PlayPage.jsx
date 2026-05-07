@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-
-const API_BASE_URL = "http://127.0.0.1:8000";
+import { Link, useParams } from "react-router-dom";
+import { API_BASE_URL, getNode, getStoryStartNode } from "../api/storyApi";
 
 function PlayPage() {
     const { storyId, nodeId } = useParams();
@@ -9,23 +8,62 @@ function PlayPage() {
     const [currentNode, setCurrentNode] = useState(null);
     const [inventory, setInventory] = useState([]);
     const [isChangingScene, setIsChangingScene] = useState(false);
-
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [collectedTokens, setCollectedTokens] = useState([]);
+    const [displayedText, setDisplayedText] = useState("");
+    const [isTextComplete, setIsTextComplete] = useState(false);
+    const [selectedChoiceId, setSelectedChoiceId] = useState(null);
     useEffect(() => {
-        const url = nodeId
-            ? `${API_BASE_URL}/api/nodes/${nodeId}`
-            : `${API_BASE_URL}/api/stories/${storyId}/start`;
+        setLoading(true);
+        setError(null);
 
-        fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                setCurrentNode(data.data);
+        const request = nodeId
+            ? getNode(nodeId)
+            : getStoryStartNode(storyId);
+
+        request
+            .then(node => {
+                setCurrentNode(node);
+            })
+            .catch(error => {
+                setError(error);
+                setCurrentNode(null);
+            })
+            .finally(() => {
+                setLoading(false);
             });
     }, [storyId, nodeId]);
+
+    useEffect(() => {
+        if (!currentNode?.text) {
+            return;
+        }
+
+        setDisplayedText("");
+        setIsTextComplete(false);
+
+        let index = 0;
+
+        const interval = setInterval(() => {
+            setDisplayedText(currentNode.text.slice(0, index + 1));
+            index++;
+
+            if (index >= currentNode.text.length) {
+                clearInterval(interval);
+                setIsTextComplete(true);
+            }
+        }, 24);
+
+        return () => clearInterval(interval);
+    }, [currentNode]);
 
     function addTokensToInventory(tokens) {
         if (!tokens || tokens.length === 0) {
             return;
         }
+
+        const newTokens = [];
 
         setInventory(prev => {
             const updated = [...prev];
@@ -35,39 +73,85 @@ function PlayPage() {
 
                 if (!alreadyExists) {
                     updated.push(token);
+                    newTokens.push(token);
                 }
             });
 
             return updated;
         });
+
+        if (newTokens.length > 0) {
+            setCollectedTokens(newTokens);
+
+            setTimeout(() => {
+                setCollectedTokens([]);
+            }, 2200);
+        }
     }
 
     function loadNextNode(choice) {
         addTokensToInventory(choice.tokens);
 
         if (!choice.next_node_id) {
-            alert("Questa scelta non porta a nessun nodo");
+            setError({
+                code: "CHOICE_WITHOUT_NEXT_NODE",
+                message: "Questa scelta non porta ancora a nessun nodo.",
+            });
             return;
         }
 
         setIsChangingScene(true);
+        setError(null);
 
         setTimeout(() => {
-            fetch(`${API_BASE_URL}/api/nodes/${choice.next_node_id}`)
-                .then(res => res.json())
-                .then(data => {
-                    setCurrentNode(data.data);
+            getNode(choice.next_node_id)
+                .then(node => {
+                    setCurrentNode(node);
+                })
+                .catch(error => {
+                    setError(error);
+                })
+                .finally(() => {
                     setIsChangingScene(false);
                 });
         }, 400);
     }
 
-    if (!currentNode) {
-        return <p>Loading...</p>;
+    if (loading) {
+        return (
+            <main className="play-state-page">
+                <div className="state-card">
+                    <div className="loader"></div>
+                    <p>Caricamento scena...</p>
+                    <Link className="secondary-link" to="/">
+                        Torna alla home
+                    </Link>
+                </div>
+            </main>
+        );
     }
 
-    const backgroundImage = currentNode.image
-        ? `${API_BASE_URL}/storage/${currentNode.image}`
+    if (error && !currentNode) {
+        return (
+            <main className="play-state-page">
+                <div className="state-card error-card">
+                    <h1>Impossibile avviare la storia</h1>
+                    <p>{error.message}</p>
+
+                    {error.code && (
+                        <p className="error-code">Codice: {error.code}</p>
+                    )}
+
+                    <Link className="play-button" to="/">
+                        Torna alla home
+                    </Link>
+                </div>
+            </main>
+        );
+    }
+
+    const backgroundImage = currentNode?.image_url
+        ? `${API_BASE_URL}${currentNode.image_url}`
         : null;
 
     return (
@@ -76,10 +160,32 @@ function PlayPage() {
             style={{
                 backgroundImage: backgroundImage
                     ? `url(${backgroundImage})`
-                    : "linear-gradient(135deg, #111, #333)"
+                    : "linear-gradient(135deg, #111, #333)",
             }}
         >
             <div className="game-overlay">
+                <Link className="home-button" to="/">
+                    ← Home
+                </Link>
+
+                {collectedTokens.length > 0 && (
+                    <div className="token-toast">
+                        <strong>Token raccolto</strong>
+
+                        {collectedTokens.map(token => (
+                            <div className="token-toast-item" key={token.id}>
+                                {token.image_url && (
+                                    <img
+                                        src={`${API_BASE_URL}${token.image_url}`}
+                                        alt={token.name}
+                                    />
+                                )}
+
+                                <span>{token.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 <div className="inventory">
                     <h2>Inventario</h2>
@@ -89,9 +195,9 @@ function PlayPage() {
                     ) : (
                         inventory.map(token => (
                             <div className="token" key={token.id}>
-                                {token.image && (
+                                {token.image_url && (
                                     <img
-                                        src={`${API_BASE_URL}/storage/${token.image}`}
+                                        src={`${API_BASE_URL}${token.image_url}`}
                                         width="36"
                                         alt={token.name}
                                     />
@@ -104,19 +210,35 @@ function PlayPage() {
                 </div>
 
                 <div className="scene-box">
-                    <h1>{currentNode.title}</h1>
+                    {error && (
+                        <div className="inline-error">
+                            {error.message}
+                        </div>
+                    )}
 
-                    <p className="scene-text">{currentNode.text}</p>
+                    <h1>{currentNode.title || "Nodo senza titolo"}</h1>
+
+                    <p className="scene-text">
+                        {displayedText}
+                        {!isTextComplete && <span className="text-cursor">|</span>}
+                    </p>
 
                     <div className="choices">
                         {currentNode.choices.length === 0 ? (
-                            <p className="end-message">Fine della storia</p>
+                            <div>
+                                <p className="end-message">Fine della storia</p>
+
+                                <Link className="play-button" to="/">
+                                    Torna alla home
+                                </Link>
+                            </div>
                         ) : (
                             currentNode.choices.map(choice => (
                                 <button
                                     className="choice-button"
                                     key={choice.id}
                                     onClick={() => loadNextNode(choice)}
+                                    disabled={isChangingScene || !isTextComplete}
                                 >
                                     {choice.text}
                                 </button>
@@ -124,7 +246,6 @@ function PlayPage() {
                         )}
                     </div>
                 </div>
-
             </div>
         </div>
     );
