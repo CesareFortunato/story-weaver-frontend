@@ -36,6 +36,8 @@ function PlayPage() {
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
     const [audio, setAudio] = useState(null);
 
+    const [selectedToken, setSelectedToken] = useState(null);
+
     useEffect(() => {
         setLoading(true);
         setError(null);
@@ -285,7 +287,11 @@ function PlayPage() {
                         <p>Nessun token</p>
                     ) : (
                         inventory.map(token => (
-                            <div className="token" key={token.id}>
+                            <button
+                                className="token"
+                                key={token.id}
+                                onClick={() => setSelectedToken(token)}
+                            >
                                 {token.image_url && (
                                     <img
                                         src={`${API_BASE_URL}${token.image_url}`}
@@ -295,10 +301,38 @@ function PlayPage() {
                                 )}
 
                                 <span>{token.name}</span>
-                            </div>
+                            </button>
                         ))
                     )}
                 </div>
+
+                {selectedToken && (
+                    <div className="token-modal-backdrop" onClick={() => setSelectedToken(null)}>
+                        <div className="token-modal" onClick={event => event.stopPropagation()}>
+                            <button
+                                className="token-modal-close"
+                                onClick={() => setSelectedToken(null)}
+                            >
+                                ×
+                            </button>
+
+                            {selectedToken.image_url && (
+                                <img
+                                    className="token-modal-image"
+                                    src={`${API_BASE_URL}${selectedToken.image_url}`}
+                                    alt={selectedToken.name}
+                                />
+                            )}
+
+                            <p className="token-modal-label">Token</p>
+                            <h2>{selectedToken.name}</h2>
+
+                            <p className="token-modal-description">
+                                {selectedToken.description || "Nessuna descrizione disponibile."}
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 <div className="scene-box">
                     {error && (
