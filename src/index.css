@@ -454,3 +454,79 @@ body {
 }
 
 
+.game-page::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at center, transparent 28%, rgba(0, 0, 0, 0.55) 100%),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.78));
+    z-index: 1;
+}
+
+.game-page::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+    background-size: 4px 4px;
+    opacity: 0.16;
+    mix-blend-mode: overlay;
+    z-index: 2;
+}
+
+.game-overlay {
+    position: relative;
+    z-index: 3;
+    background:
+        linear-gradient(to bottom,
+            rgba(0, 0, 0, 0.05),
+            rgba(0, 0, 0, 0.55) 52%,
+            rgba(0, 0, 0, 0.92));
+}
+
+.scene-box {
+    position: relative;
+    box-shadow:
+        0 26px 90px rgba(0, 0, 0, 0.72),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.scene-box::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 18px;
+    pointer-events: none;
+    background:
+        linear-gradient(135deg,
+            rgba(216, 163, 93, 0.26),
+            transparent 28%,
+            rgba(255, 255, 255, 0.08));
+    mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    padding: 1px;
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+
+.scene-box h1 {
+    text-shadow: 0 0 24px rgba(216, 163, 93, 0.18);
+}
+
+.scene-text {
+    color: rgba(255, 255, 255, 0.86);
+}
+
+.inventory {
+    z-index: 4;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+}
