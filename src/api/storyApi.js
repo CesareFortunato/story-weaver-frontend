@@ -38,7 +38,7 @@ export function getStories() {
     return apiGet("/api/stories");
 }
 
-export function getStoryStartNode(storyId) {
+export function getStoryStart(storyId) {
     return apiGet(`/api/stories/${storyId}/start`);
 }
 

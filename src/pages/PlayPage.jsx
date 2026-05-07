@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { API_BASE_URL, getNode, getStoryStartNode } from "../api/storyApi";
+import { API_BASE_URL, getNode, getStoryStart } from "../api/storyApi";
 
 const INVENTORY_STORAGE_KEY = "storyweaver_inventory";
 const CURRENT_NODE_STORAGE_KEY = "storyweaver_current_node_id";
@@ -8,7 +8,9 @@ const CURRENT_NODE_STORAGE_KEY = "storyweaver_current_node_id";
 function PlayPage() {
     const { storyId, nodeId } = useParams();
 
+    const [currentStory, setCurrentStory] = useState(null);
     const [currentNode, setCurrentNode] = useState(null);
+
     const [inventory, setInventory] = useState(() => {
         const savedInventory = localStorage.getItem(INVENTORY_STORAGE_KEY);
 
@@ -32,19 +34,7 @@ function PlayPage() {
     const [selectedChoiceId, setSelectedChoiceId] = useState(null);
 
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
-    const [audio] = useState(() => {
-        const ambientAudio = new Audio("/audio/ambient-loop.mp3");
-        ambientAudio.loop = true;
-        ambientAudio.volume = 0.35;
-        return ambientAudio;
-    });
-
-    useEffect(() => {
-        return () => {
-            audio.pause();
-            audio.currentTime = 0;
-        };
-    }, [audio]);
+    const [audio, setAudio] = useState(null);
 
     useEffect(() => {
         setLoading(true);
@@ -56,11 +46,18 @@ function PlayPage() {
             ? getNode(nodeId)
             : savedNodeId
                 ? getNode(savedNodeId)
-                : getStoryStartNode(storyId);
+                : getStoryStart(storyId);
 
         request
-            .then(node => {
+            .then(data => {
+                const node = data.node || data;
+
                 setCurrentNode(node);
+
+                if (data.story) {
+                    setCurrentStory(data.story);
+                }
+
                 localStorage.setItem(CURRENT_NODE_STORAGE_KEY, node.id);
             })
             .catch(error => {
@@ -72,7 +69,24 @@ function PlayPage() {
             });
     }, [storyId, nodeId]);
 
+    useEffect(() => {
+        if (!currentStory?.ambient_audio_url) {
+            setAudio(null);
+            setIsMusicPlaying(false);
+            return;
+        }
 
+        const ambientAudio = new Audio(`${API_BASE_URL}${currentStory.ambient_audio_url}`);
+        ambientAudio.loop = true;
+        ambientAudio.volume = 0.35;
+
+        setAudio(ambientAudio);
+
+        return () => {
+            ambientAudio.pause();
+            ambientAudio.currentTime = 0;
+        };
+    }, [currentStory]);
 
     useEffect(() => {
         if (!currentNode?.text) {
@@ -102,6 +116,14 @@ function PlayPage() {
     }, [inventory]);
 
     function toggleMusic() {
+        if (!audio) {
+            setError({
+                code: "AUDIO_NOT_AVAILABLE",
+                message: "Questa storia non ha un audio ambientale configurato.",
+            });
+            return;
+        }
+
         if (isMusicPlaying) {
             audio.pause();
             setIsMusicPlaying(false);
@@ -191,7 +213,6 @@ function PlayPage() {
                     <Link className="secondary-link" to="/">
                         Torna alla home
                     </Link>
-
                 </div>
             </main>
         );
@@ -233,6 +254,7 @@ function PlayPage() {
                 <Link className="home-button" to="/">
                     ← Home
                 </Link>
+
                 <button className="music-button" onClick={toggleMusic}>
                     {isMusicPlaying ? "🔊 Audio ON" : "🔈 Audio OFF"}
                 </button>
