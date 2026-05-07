@@ -68,7 +68,14 @@ function HomePage() {
                                     <p>{story.description || "Nessuna descrizione disponibile."}</p>
                                 </div>
 
-                                <Link className="play-button" to={`/play/${story.id}`}>
+                                <Link
+                                    className="play-button"
+                                    to={`/play/${story.id}`}
+                                    onClick={() => {
+                                        localStorage.removeItem("storyweaver_inventory");
+                                        localStorage.removeItem("storyweaver_current_node_id");
+                                    }}
+                                >
                                     Gioca
                                 </Link>
                             </article>
