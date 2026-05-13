@@ -2,15 +2,19 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { API_BASE_URL, getNode, getStoryStart } from "../api/storyApi";
 
+// Chiavi usate per salvare inventario e nodo corrente nel localStorage.
 const INVENTORY_STORAGE_KEY = "storyweaver_inventory";
 const CURRENT_NODE_STORAGE_KEY = "storyweaver_current_node_id";
 
 function PlayPage() {
+    // Recupera i parametri dinamici dalla rotta.
     const { storyId, nodeId } = useParams();
 
+    // Stato della storia corrente e del nodo attualmente visualizzato.
     const [currentStory, setCurrentStory] = useState(null);
     const [currentNode, setCurrentNode] = useState(null);
 
+    // Inventario inizializzato leggendo eventuali token salvati nel localStorage.
     const [inventory, setInventory] = useState(() => {
         const savedInventory = localStorage.getItem(INVENTORY_STORAGE_KEY);
 
@@ -25,6 +29,7 @@ function PlayPage() {
         }
     });
 
+    // Stati UI principali.
     const [isChangingScene, setIsChangingScene] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -33,11 +38,17 @@ function PlayPage() {
     const [isTextComplete, setIsTextComplete] = useState(false);
     const [selectedChoiceId, setSelectedChoiceId] = useState(null);
 
+    // Stati per la gestione dell'audio ambientale.
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
     const [audio, setAudio] = useState(null);
 
+    // Token selezionato nell'inventario per aprire la modale.
     const [selectedToken, setSelectedToken] = useState(null);
 
+    // Carica il nodo da mostrare:
+    // - se arriva nodeId dalla rotta, usa quello
+    // - altrimenti prova a riprendere il nodo salvato
+    // - se non esiste, parte dal nodo iniziale della storia
     useEffect(() => {
         setLoading(true);
         setError(null);
@@ -52,14 +63,18 @@ function PlayPage() {
 
         request
             .then(data => {
+                // Alcune API restituiscono direttamente il nodo,
+                // altre restituiscono { story, node }.
                 const node = data.node || data;
 
                 setCurrentNode(node);
 
+                // Se la risposta include i dati della storia, li salva.
                 if (data.story) {
                     setCurrentStory(data.story);
                 }
 
+                // Salva il nodo corrente per poter continuare la partita.
                 localStorage.setItem(CURRENT_NODE_STORAGE_KEY, node.id);
             })
             .catch(error => {
@@ -71,6 +86,7 @@ function PlayPage() {
             });
     }, [storyId, nodeId]);
 
+    // Prepara l'audio ambientale della storia, se configurato nel backend.
     useEffect(() => {
         if (!currentStory?.ambient_audio_url) {
             setAudio(null);
@@ -79,17 +95,21 @@ function PlayPage() {
         }
 
         const ambientAudio = new Audio(`${API_BASE_URL}${currentStory.ambient_audio_url}`);
+
+        // Loop continuo e volume controllato.
         ambientAudio.loop = true;
         ambientAudio.volume = 0.35;
 
         setAudio(ambientAudio);
 
+        // Cleanup: ferma l'audio quando cambia storia o si smonta il componente.
         return () => {
             ambientAudio.pause();
             ambientAudio.currentTime = 0;
         };
     }, [currentStory]);
 
+    // Effetto macchina da scrivere sul testo del nodo.
     useEffect(() => {
         if (!currentNode?.text) {
             return;
@@ -113,10 +133,12 @@ function PlayPage() {
         return () => clearInterval(interval);
     }, [currentNode]);
 
+    // Ogni volta che cambia l'inventario, lo salva nel localStorage.
     useEffect(() => {
         localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(inventory));
     }, [inventory]);
 
+    // Attiva o disattiva la musica ambientale.
     function toggleMusic() {
         if (!audio) {
             setError({
@@ -144,6 +166,7 @@ function PlayPage() {
             });
     }
 
+    // Aggiunge all'inventario i token ottenuti da una scelta.
     function addTokensToInventory(tokens) {
         if (!tokens || tokens.length === 0) {
             return;
@@ -155,6 +178,7 @@ function PlayPage() {
             const updated = [...prev];
 
             tokens.forEach(token => {
+                // Evita duplicati controllando l'id del token.
                 const alreadyExists = updated.find(item => item.id === token.id);
 
                 if (!alreadyExists) {
@@ -166,6 +190,7 @@ function PlayPage() {
             return updated;
         });
 
+        // Mostra un toast temporaneo con i nuovi token raccolti.
         if (newTokens.length > 0) {
             setCollectedTokens(newTokens);
 
@@ -175,10 +200,14 @@ function PlayPage() {
         }
     }
 
+    // Gestisce il click su una scelta e carica il nodo successivo.
     function loadNextNode(choice) {
         setSelectedChoiceId(choice.id);
+
+        // Prima di cambiare scena assegna eventuali token.
         addTokensToInventory(choice.tokens);
 
+        // Se la scelta non ha destinazione, mostra errore.
         if (!choice.next_node_id) {
             setError({
                 code: "CHOICE_WITHOUT_NEXT_NODE",
@@ -190,11 +219,14 @@ function PlayPage() {
         setIsChangingScene(true);
         setError(null);
 
+        // Piccolo delay per permettere l'effetto di transizione.
         setTimeout(() => {
             getNode(choice.next_node_id)
                 .then(node => {
                     setCurrentNode(node);
                     setSelectedChoiceId(null);
+
+                    // Aggiorna il nodo corrente salvato.
                     localStorage.setItem(CURRENT_NODE_STORAGE_KEY, node.id);
                 })
                 .catch(error => {
@@ -206,12 +238,15 @@ function PlayPage() {
         }, 400);
     }
 
+    // Stato di caricamento iniziale.
     if (loading) {
         return (
             <main className="play-state-page">
                 <div className="state-card">
                     <div className="loader"></div>
+
                     <p>Caricamento scena...</p>
+
                     <Link className="secondary-link" to="/">
                         Torna alla home
                     </Link>
@@ -220,11 +255,13 @@ function PlayPage() {
         );
     }
 
+    // Stato di errore bloccante, quando non è stato caricato nessun nodo.
     if (error && !currentNode) {
         return (
             <main className="play-state-page">
                 <div className="state-card error-card">
                     <h1>Impossibile avviare la storia</h1>
+
                     <p>{error.message}</p>
 
                     {error.code && (
@@ -239,6 +276,7 @@ function PlayPage() {
         );
     }
 
+    // Imposta l'immagine di sfondo della scena se presente.
     const backgroundImage = currentNode?.image_url
         ? `${API_BASE_URL}${currentNode.image_url}`
         : null;
@@ -253,14 +291,18 @@ function PlayPage() {
             }}
         >
             <div className="game-overlay">
+
+                {/* Link per tornare alla home */}
                 <Link className="home-button" to="/">
                     ← Home
                 </Link>
 
+                {/* Pulsante audio ambientale */}
                 <button className="music-button" onClick={toggleMusic}>
                     {isMusicPlaying ? "🔊 Audio ON" : "🔈 Audio OFF"}
                 </button>
 
+                {/* Toast mostrato quando vengono raccolti nuovi token */}
                 {collectedTokens.length > 0 && (
                     <div className="token-toast">
                         <strong>Token raccolto</strong>
@@ -280,6 +322,7 @@ function PlayPage() {
                     </div>
                 )}
 
+                {/* Inventario del giocatore */}
                 <div className="inventory">
                     <h2>Inventario</h2>
 
@@ -306,9 +349,11 @@ function PlayPage() {
                     )}
                 </div>
 
+                {/* Modale dettaglio token selezionato */}
                 {selectedToken && (
                     <div className="token-modal-backdrop" onClick={() => setSelectedToken(null)}>
                         <div className="token-modal" onClick={event => event.stopPropagation()}>
+
                             <button
                                 className="token-modal-close"
                                 onClick={() => setSelectedToken(null)}
@@ -325,6 +370,7 @@ function PlayPage() {
                             )}
 
                             <p className="token-modal-label">Token</p>
+
                             <h2>{selectedToken.name}</h2>
 
                             <p className="token-modal-description">
@@ -334,7 +380,10 @@ function PlayPage() {
                     </div>
                 )}
 
+                {/* Box principale della scena */}
                 <div className="scene-box">
+
+                    {/* Errore non bloccante, ad esempio scelta senza destinazione */}
                     {error && (
                         <div className="inline-error">
                             {error.message}
@@ -343,13 +392,17 @@ function PlayPage() {
 
                     <h1>{currentNode.title || "Nodo senza titolo"}</h1>
 
+                    {/* Testo della scena con effetto typing */}
                     <p className="scene-text">
                         {displayedText}
                         {!isTextComplete && <span className="text-cursor">|</span>}
                     </p>
 
+                    {/* Scelte oppure schermata finale */}
                     <div className="choices">
                         {currentNode.choices.length === 0 ? (
+
+                            // Se il nodo non ha scelte, viene considerato finale.
                             <div className="ending-box">
                                 <p className="ending-label">Finale raggiunto</p>
 
@@ -359,6 +412,7 @@ function PlayPage() {
                                     La tua storia termina qui. Le scelte compiute hanno lasciato un segno nel mondo.
                                 </p>
 
+                                {/* Riepilogo token raccolti durante la partita */}
                                 {inventory.length > 0 && (
                                     <div className="ending-inventory">
                                         <h3>Token raccolti</h3>
@@ -380,6 +434,7 @@ function PlayPage() {
                                     </div>
                                 )}
 
+                                {/* Azioni finali */}
                                 <div className="ending-actions">
                                     <Link
                                         className="play-button"
@@ -405,11 +460,16 @@ function PlayPage() {
                                 </div>
                             </div>
                         ) : (
+
+                            // Lista delle scelte disponibili.
                             currentNode.choices.map(choice => (
                                 <button
                                     className={`choice-button ${selectedChoiceId === choice.id ? "selected" : ""}`}
                                     key={choice.id}
                                     onClick={() => loadNextNode(choice)}
+
+                                    // Le scelte sono disabilitate durante il cambio scena
+                                    // o finché il testo non è stato mostrato tutto.
                                     disabled={isChangingScene || !isTextComplete}
                                 >
                                     {choice.text}
