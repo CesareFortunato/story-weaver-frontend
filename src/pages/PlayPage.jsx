@@ -1,18 +1,30 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { API_BASE_URL, getNode, getStoryStart } from "../api/storyApi";
 
-// Chiavi usate per salvare inventario e nodo corrente nel localStorage.
+import { API_BASE_URL, getNode, getStoryStart } from "../api/storyApi";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+
+// Chiavi usate per salvare inventario, nodo corrente e storia corrente nel localStorage.
 const INVENTORY_STORAGE_KEY = "storyweaver_inventory";
 const CURRENT_NODE_STORAGE_KEY = "storyweaver_current_node_id";
+const CURRENT_STORY_STORAGE_KEY = "storyweaver_current_story_id";
+
 
 function PlayPage() {
     // Recupera i parametri dinamici dalla rotta.
     const { storyId, nodeId } = useParams();
 
+    const [searchParams] = useSearchParams();
+
+    const isFreshPlaytest = searchParams.get("fresh") === "1";
+
     // Stato della storia corrente e del nodo attualmente visualizzato.
     const [currentStory, setCurrentStory] = useState(null);
     const [currentNode, setCurrentNode] = useState(null);
+
+    // Tiene memoria dell'id storia anche quando si entra da /play-node/:nodeId.
+    const [activeStoryId, setActiveStoryId] = useState(() => {
+        return storyId || localStorage.getItem(CURRENT_STORY_STORAGE_KEY);
+    });
 
     // Inventario inizializzato leggendo eventuali token salvati nel localStorage.
     const [inventory, setInventory] = useState(() => {
@@ -53,13 +65,21 @@ function PlayPage() {
         setLoading(true);
         setError(null);
 
-        const savedNodeId = localStorage.getItem(CURRENT_NODE_STORAGE_KEY);
+        const savedNodeId = isFreshPlaytest
+            ? null
+            : localStorage.getItem(CURRENT_NODE_STORAGE_KEY);
 
         const request = nodeId
             ? getNode(nodeId)
             : savedNodeId
                 ? getNode(savedNodeId)
                 : getStoryStart(storyId);
+
+        if (isFreshPlaytest) {
+            localStorage.removeItem(INVENTORY_STORAGE_KEY);
+            localStorage.removeItem(CURRENT_NODE_STORAGE_KEY);
+            localStorage.removeItem(CURRENT_STORY_STORAGE_KEY);
+        }
 
         request
             .then(data => {
@@ -72,6 +92,20 @@ function PlayPage() {
                 // Se la risposta include i dati della storia, li salva.
                 if (data.story) {
                     setCurrentStory(data.story);
+                    setActiveStoryId(data.story.id);
+                    localStorage.setItem(CURRENT_STORY_STORAGE_KEY, data.story.id);
+                }
+
+                // Se il nodo contiene story_id, lo usa come fallback robusto.
+                if (node.story_id) {
+                    setActiveStoryId(node.story_id);
+                    localStorage.setItem(CURRENT_STORY_STORAGE_KEY, node.story_id);
+                }
+
+                // Se arrivo da /play/:storyId, salvo anche quello.
+                if (storyId) {
+                    setActiveStoryId(storyId);
+                    localStorage.setItem(CURRENT_STORY_STORAGE_KEY, storyId);
                 }
 
                 // Salva il nodo corrente per poter continuare la partita.
@@ -84,7 +118,7 @@ function PlayPage() {
             .finally(() => {
                 setLoading(false);
             });
-    }, [storyId, nodeId]);
+    }, [storyId, nodeId, isFreshPlaytest]);
 
     // Prepara l'audio ambientale della storia, se configurato nel backend.
     useEffect(() => {
@@ -226,6 +260,12 @@ function PlayPage() {
                     setCurrentNode(node);
                     setSelectedChoiceId(null);
 
+                    // Mantiene aggiornato l'id storia anche durante la navigazione tra nodi.
+                    if (node.story_id) {
+                        setActiveStoryId(node.story_id);
+                        localStorage.setItem(CURRENT_STORY_STORAGE_KEY, node.story_id);
+                    }
+
                     // Aggiorna il nodo corrente salvato.
                     localStorage.setItem(CURRENT_NODE_STORAGE_KEY, node.id);
                 })
@@ -236,6 +276,13 @@ function PlayPage() {
                     setIsChangingScene(false);
                 });
         }, 400);
+    }
+
+    // Reset completo della partita.
+    function resetPlaySession() {
+        localStorage.removeItem(INVENTORY_STORAGE_KEY);
+        localStorage.removeItem(CURRENT_NODE_STORAGE_KEY);
+        localStorage.removeItem(CURRENT_STORY_STORAGE_KEY);
     }
 
     // Stato di caricamento iniziale.
@@ -280,6 +327,9 @@ function PlayPage() {
     const backgroundImage = currentNode?.image_url
         ? `${API_BASE_URL}${currentNode.image_url}`
         : null;
+
+    // Id storia usato dal pulsante "Rigioca".
+    const replayStoryId = activeStoryId || storyId || currentStory?.id || currentNode?.story_id;
 
     return (
         <div
@@ -439,24 +489,20 @@ function PlayPage() {
                                     <Link
                                         className="play-button"
                                         to="/"
-                                        onClick={() => {
-                                            localStorage.removeItem(INVENTORY_STORAGE_KEY);
-                                            localStorage.removeItem(CURRENT_NODE_STORAGE_KEY);
-                                        }}
+                                        onClick={resetPlaySession}
                                     >
                                         Torna alla home
                                     </Link>
 
-                                    <Link
-                                        className="secondary-ending-button"
-                                        to={`/play/${storyId || currentNode.story_id}`}
-                                        onClick={() => {
-                                            localStorage.removeItem(INVENTORY_STORAGE_KEY);
-                                            localStorage.removeItem(CURRENT_NODE_STORAGE_KEY);
-                                        }}
-                                    >
-                                        Rigioca
-                                    </Link>
+                                    {replayStoryId && (
+                                        <Link
+                                            className="secondary-ending-button"
+                                            to={`/play/${replayStoryId}`}
+                                            onClick={resetPlaySession}
+                                        >
+                                            Rigioca
+                                        </Link>
+                                    )}
                                 </div>
                             </div>
                         ) : (
