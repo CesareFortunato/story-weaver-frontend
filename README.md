@@ -1,16 +1,40 @@
-# React + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+---
 
-Currently, two official plugins are available:
+### Frontend
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```md
+# StoryWeaver Frontend
 
-## React Compiler
+Frontend sviluppato in React per StoryWeaver, un'applicazione web per creare, modificare e visualizzare storie interattive a nodi.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tecnologie usate
 
-## Expanding the ESLint configuration
+- React
+- JavaScript
+- React Router
+- Axios
+- React Flow
+- CSS
+- Vite
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Funzionalità principali
+
+- Login e registrazione utente
+- Dashboard delle storie
+- Creazione, modifica ed eliminazione delle storie
+- Gestione dei nodi narrativi
+- Gestione delle scelte tra nodi
+- Gestione dei token
+- Upload immagini per i nodi
+- Upload audio ambientale per le storie
+- Visualizzazione grafica della struttura narrativa con React Flow
+- Creazione multipla di nodi, scelte e token
+- Interfaccia pensata per organizzare facilmente storie ramificate
+
+## Installazione
+
+Clonare il repository:
+
+```bash
+git clone https://github.com/CesareFortunato/story-weaver-frontend.git
